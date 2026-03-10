@@ -7,14 +7,16 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Wallet
+  Wallet,
+  Sparkles
 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { cn } from '../lib/utils';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Create Video', path: '/dashboard/create', icon: PlusCircle },
+  { name: 'Video Agent', path: '/dashboard/create?tab=agent', icon: Sparkles },
+  { name: 'Create Video', path: '/dashboard/create?tab=avatar', icon: PlusCircle },
   { name: 'My Videos', path: '/dashboard/videos', icon: Video },
   { name: 'Avatars', path: '/dashboard/avatars', icon: Users },
   { name: 'Settings', path: '/dashboard/settings', icon: Settings },
@@ -44,7 +46,7 @@ export const Sidebar = () => {
         <nav className="flex-1 px-4 space-y-2 mt-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || (item.path.includes('?') && location.pathname === item.path.split('?')[0] && location.search.includes(item.path.split('?')[1]));
             return (
               <Link
                 key={item.path}
@@ -97,7 +99,7 @@ export const Sidebar = () => {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#12121a] border-t border-[#1e1e2e] flex justify-around items-center h-16 z-50 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path || (item.path.includes('?') && location.pathname === item.path.split('?')[0] && location.search.includes(item.path.split('?')[1]));
           return (
             <Link
               key={item.path}

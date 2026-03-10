@@ -103,6 +103,15 @@ export class HeyGenClient {
     return response.data.data;
   }
 
+  async generateTemplateVideo(templateId: string, variables: any) {
+    const response = await axios.post(`${this.baseURL}/v2/template/${templateId}/generate`, {
+      variables
+    }, {
+      headers: this.headers,
+    });
+    return response.data.data;
+  }
+
   async getVideoStatus(videoId: string) {
     const response = await axios.get(`${this.baseURL}/v2/video/status?video_id=${videoId}`, {
       headers: this.headers,

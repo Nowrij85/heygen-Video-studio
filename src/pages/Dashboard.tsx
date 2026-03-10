@@ -8,7 +8,8 @@ import {
   Users, 
   Settings,
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../store';
@@ -135,21 +136,37 @@ export const DashboardPage = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link 
-          to="/dashboard/create"
-          className="group bg-[#6366f1] p-6 rounded-2xl flex items-center justify-between hover:bg-[#4f46e5] transition-all"
+          to="/dashboard/create?tab=agent"
+          className="group bg-[#6366f1] p-6 rounded-2xl flex items-center justify-between hover:bg-[#4f46e5] transition-all shadow-lg shadow-[#6366f1]/20"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl text-white">
-              <PlusCircle size={24} />
+              <Sparkles size={24} />
             </div>
             <div>
-              <h4 className="font-bold text-white">Create New Video</h4>
-              <p className="text-white/70 text-sm">Start a new project</p>
+              <h4 className="font-bold text-white">Video Agent</h4>
+              <p className="text-white/70 text-sm">Create from prompt</p>
             </div>
           </div>
           <ArrowRight className="text-white/50 group-hover:text-white transition-colors" />
+        </Link>
+
+        <Link 
+          to="/dashboard/create?tab=avatar"
+          className="group bg-[#12121a] border border-[#1e1e2e] p-6 rounded-2xl flex items-center justify-between hover:border-[#6366f1]/50 transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-[#6366f1]/10 rounded-xl text-[#6366f1]">
+              <PlusCircle size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-white">Avatar Video</h4>
+              <p className="text-[#94a3b8] text-sm">Start from script</p>
+            </div>
+          </div>
+          <ArrowRight className="text-[#94a3b8] group-hover:text-white transition-colors" />
         </Link>
 
         <Link 
@@ -162,7 +179,7 @@ export const DashboardPage = () => {
             </div>
             <div>
               <h4 className="font-bold text-white">Browse Avatars</h4>
-              <p className="text-[#94a3b8] text-sm">Explore avatar library</p>
+              <p className="text-[#94a3b8] text-sm">Explore library</p>
             </div>
           </div>
           <ArrowRight className="text-[#94a3b8] group-hover:text-white transition-colors" />
@@ -177,8 +194,8 @@ export const DashboardPage = () => {
               <Settings size={24} />
             </div>
             <div>
-              <h4 className="font-bold text-white">Check Settings</h4>
-              <p className="text-[#94a3b8] text-sm">Manage API & Account</p>
+              <h4 className="font-bold text-white">Settings</h4>
+              <p className="text-[#94a3b8] text-sm">Manage API</p>
             </div>
           </div>
           <ArrowRight className="text-[#94a3b8] group-hover:text-white transition-colors" />

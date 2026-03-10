@@ -13,11 +13,15 @@ import {
   RefreshCw,
   PlusCircle,
   Upload,
-  X
+  X,
+  Sparkles,
+  Wand2,
+  Eraser
 } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
 import { getHeyGenClient } from '../lib/heygen';
+import { generateScriptFromPrompt } from '../lib/gemini';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -28,12 +32,16 @@ export const CreateVideoPage = () => {
   const { apiKey, addVideo } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [activeTab, setActiveTab] = useState<'avatar' | 'photo' | 'template'>('avatar');
+  const [activeTab, setActiveTab] = useState<'agent' | 'avatar' | 'photo' | 'template'>(
+    (searchParams.get('tab') as any) || 'agent'
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
 
   // Form State
   const [title, setTitle] = useState('');
+  const [prompt, setPrompt] = useState('');
   const [script, setScript] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(searchParams.get('avatarId') || '');
   const [selectedVoice, setSelectedVoice] = useState('');
@@ -55,6 +63,17 @@ export const CreateVideoPage = () => {
   const [voices, setVoices] = useState<any[]>([]);
 
   useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['agent', 'avatar', 'photo', 'template'].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+    const avatarId = searchParams.get('avatarId');
+    if (avatarId) {
+      setSelectedAvatar(avatarId);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const fetchData = async () => {
       if (!apiKey) return;
       setIsLoading(true);
@@ -71,6 +90,10 @@ export const CreateVideoPage = () => {
         
         if (voiceData.length > 0 && !selectedVoice) {
           setSelectedVoice(voiceData[0].voice_id);
+        }
+
+        if (avatarData.length > 0 && !selectedAvatar) {
+          setSelectedAvatar(avatarData[0].avatar_id);
         }
       } catch (error) {
         toast.error('Failed to fetch library data');
@@ -91,6 +114,25 @@ export const CreateVideoPage = () => {
     }
   };
 
+  const handleGenerateScript = async () => {
+    if (!prompt) {
+      toast.error('Please enter a prompt first');
+      return;
+    }
+    setIsGeneratingScript(true);
+    try {
+      const generatedScript = await generateScriptFromPrompt(prompt);
+      setScript(generatedScript);
+      toast.success('Script generated successfully!');
+      // After generating script, we can switch to avatar tab or stay here
+      // But let's stay here and show the script
+    } catch (error: any) {
+      toast.error('Failed to generate script: ' + error.message);
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!apiKey) {
       toast.error('API key not configured');
@@ -107,11 +149,11 @@ export const CreateVideoPage = () => {
     setIsGenerating(true);
     try {
       const client = getHeyGenClient(apiKey);
-      let payload: any = {};
+      let result: any;
 
-      if (activeTab === 'avatar') {
+      if (activeTab === 'avatar' || activeTab === 'agent') {
         if (!selectedAvatar) throw new Error('Please select an avatar');
-        payload = {
+        const payload = {
           video_inputs: [{
             character: {
               type: 'avatar',
@@ -132,16 +174,18 @@ export const CreateVideoPage = () => {
           dimension: dimension,
           caption: false
         };
+        result = await client.generateVideo(payload);
       } else if (activeTab === 'photo') {
         if (!photoFile) throw new Error('Please upload a photo');
-        // In real HeyGen API, you'd upload the asset first
-        // For this demo, we'll simulate the asset ID or use a placeholder
-        // const asset = await client.uploadAsset(photoFile);
-        payload = {
+        
+        toast.info('Uploading photo asset...');
+        const asset = await client.uploadAsset(photoFile);
+        
+        const payload = {
           video_inputs: [{
             character: {
               type: 'talking_photo',
-              talking_photo_id: 'placeholder_id', // asset.id
+              talking_photo_id: asset.asset_id || asset.id,
             },
             voice: {
               type: 'text',
@@ -151,16 +195,11 @@ export const CreateVideoPage = () => {
           }],
           dimension: dimension
         };
+        result = await client.generateVideo(payload);
       } else if (activeTab === 'template') {
         if (!selectedTemplate) throw new Error('Please select a template');
-        // Template generation usually has its own endpoint or specific payload
-        payload = {
-          template_id: selectedTemplate.template_id,
-          variables: {} // In a full implementation, you'd collect variable values
-        };
+        result = await client.generateTemplateVideo(selectedTemplate.template_id, {});
       }
-
-      const result = await client.generateVideo(payload);
       
       addVideo({
         id: result.video_id,
@@ -202,6 +241,7 @@ export const CreateVideoPage = () => {
       {/* Tabs */}
       <div className="flex bg-[#12121a] p-1.5 rounded-2xl border border-[#1e1e2e]">
         {[
+          { id: 'agent', label: 'Video Agent', icon: Sparkles },
           { id: 'avatar', label: 'Avatar Video', icon: Video },
           { id: 'photo', label: 'Talking Photo', icon: ImageIcon },
           { id: 'template', label: 'Video Template', icon: Layout },
@@ -226,6 +266,96 @@ export const CreateVideoPage = () => {
         {/* Main Content Area */}
         <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
+            {activeTab === 'agent' && (
+              <motion.div
+                key="agent-tab"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-6"
+              >
+                <div className="bg-[#12121a] border border-[#1e1e2e] rounded-2xl p-6 space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-[#94a3b8] mb-2">What is your video about?</label>
+                    <div className="relative">
+                      <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        rows={4}
+                        placeholder="e.g. Create a 30-second introduction for a new AI product called 'HeyGen Studio'..."
+                        className="w-full bg-[#1e1e2e] border border-[#1e1e2e] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all resize-none pr-12"
+                      />
+                      <button
+                        onClick={handleGenerateScript}
+                        disabled={isGeneratingScript || !prompt}
+                        className="absolute bottom-3 right-3 p-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#4f46e5] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#6366f1]/20"
+                        title="Generate Script"
+                      >
+                        {isGeneratingScript ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#64748b] mt-2">Our AI will generate a professional script and select the best settings for you.</p>
+                  </div>
+
+                  {script && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-[#94a3b8]">Generated Script</label>
+                          <button 
+                            onClick={() => setScript('')}
+                            className="text-xs text-[#94a3b8] hover:text-[#ef4444] flex items-center gap-1 transition-colors"
+                            title="Clear Script"
+                          >
+                            <Eraser size={12} />
+                            <span>Clear</span>
+                          </button>
+                        </div>
+                        <textarea
+                          value={script}
+                          onChange={(e) => setScript(e.target.value)}
+                          rows={6}
+                          className="w-full bg-[#1e1e2e]/50 border border-[#1e1e2e] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all resize-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-[#94a3b8] mb-2">Avatar</label>
+                          <select
+                            value={selectedAvatar}
+                            onChange={(e) => setSelectedAvatar(e.target.value)}
+                            className="w-full bg-[#1e1e2e] border border-[#1e1e2e] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all appearance-none"
+                          >
+                            <option value="">Select Avatar</option>
+                            {avatars.map((a) => (
+                              <option key={a.avatar_id} value={a.avatar_id}>{a.avatar_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#94a3b8] mb-2">Voice</label>
+                          <select
+                            value={selectedVoice}
+                            onChange={(e) => setSelectedVoice(e.target.value)}
+                            className="w-full bg-[#1e1e2e] border border-[#1e1e2e] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6366f1] transition-all appearance-none"
+                          >
+                            {voices.map((v) => (
+                              <option key={v.voice_id} value={v.voice_id}>{v.display_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'avatar' && (
               <motion.div
                 key="avatar-tab"
@@ -248,7 +378,17 @@ export const CreateVideoPage = () => {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-[#94a3b8]">Script / Text</label>
+                      <div className="flex items-center gap-3">
+                        <label className="block text-sm font-medium text-[#94a3b8]">Script / Text</label>
+                        <button 
+                          onClick={() => setScript('')}
+                          className="text-xs text-[#94a3b8] hover:text-[#ef4444] flex items-center gap-1 transition-colors"
+                          title="Clear Script"
+                        >
+                          <Eraser size={12} />
+                          <span>Clear</span>
+                        </button>
+                      </div>
                       <span className="text-xs text-[#94a3b8]">{script.length} / 1500</span>
                     </div>
                     <textarea
@@ -336,7 +476,17 @@ export const CreateVideoPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#94a3b8] mb-2">Script / Text</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-[#94a3b8]">Script / Text</label>
+                      <button 
+                        onClick={() => setScript('')}
+                        className="text-xs text-[#94a3b8] hover:text-[#ef4444] flex items-center gap-1 transition-colors"
+                        title="Clear Script"
+                      >
+                        <Eraser size={12} />
+                        <span>Clear</span>
+                      </button>
+                    </div>
                     <textarea
                       value={script}
                       onChange={(e) => setScript(e.target.value.slice(0, 1500))}
