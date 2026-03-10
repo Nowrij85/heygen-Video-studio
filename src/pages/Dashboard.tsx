@@ -69,8 +69,9 @@ export const DashboardPage = () => {
       const data = await client.getBalance();
       setBalance(data);
       toast.success('Balance updated');
-    } catch (error) {
-      toast.error('Failed to fetch balance');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to fetch balance';
+      toast.error(`Sync failed: ${errorMessage}`);
     } finally {
       setIsRefreshing(false);
     }
