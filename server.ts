@@ -67,10 +67,18 @@ async function startServer() {
       
       // If the error data is HTML, don't send it back as JSON
       if (typeof errorData === 'string' && errorData.includes('<!DOCTYPE')) {
-        console.error(`[Proxy Error] Received HTML instead of JSON from HeyGen (${status}) for ${req.method} ${url}`);
-        errorData = { error: { message: `HeyGen returned an HTML error page (Status ${status}). This usually means the API endpoint path is incorrect or the service is down. URL: ${url}` } };
+        if (status === 404) {
+          console.warn(`[Proxy Warning] 404 Not Found from HeyGen for ${req.method} ${url}`);
+        } else {
+          console.error(`[Proxy Error] Received HTML instead of JSON from HeyGen (${status}) for ${req.method} ${url}`);
+        }
+        errorData = { error: { message: `HeyGen returned an HTML page (Status ${status}). URL: ${url}` } };
       } else {
-        console.error(`[Proxy Error] ${status} for ${url}:`, errorData || error.message);
+        if (status === 404) {
+          console.warn(`[Proxy Warning] 404 for ${url}`);
+        } else {
+          console.error(`[Proxy Error] ${status} for ${url}:`, errorData || error.message);
+        }
       }
 
       res.status(status).json(errorData || { error: { message: error.message } });

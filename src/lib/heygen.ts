@@ -17,7 +17,6 @@ export class HeyGenClient {
 
   async getBalance() {
     const endpoints = [
-      '/v2/user/info',
       '/v2/user/remaining_quota',
       '/v1/user.remaining_quota',
       '/v1/user/remaining_quota',
@@ -48,9 +47,9 @@ export class HeyGenClient {
   }
 
   async testConnection() {
-    // Try v2/user/info first as it's the most basic account check
+    // Try v2/user/remaining_quota first as it's a reliable account check
     try {
-      const response = await axios.get(`${this.baseURL}/v2/user/info`, {
+      const response = await axios.get(`${this.baseURL}/v2/user/remaining_quota`, {
         headers: this.headers,
       });
       return response.data;
